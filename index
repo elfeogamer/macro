@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ticket de Carga — Bimbo</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root {
+    --azul: #0055A4; --azul-oscuro: #003D7A;
+    --rojo: #E30613; --amarillo: #FFD500;
+    --gris-claro: #f4f6fa; --gris-borde: #d0d7e3; --texto: #1a1f2e;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { font-family: 'DM Sans', sans-serif; background: var(--gris-claro); color: var(--texto); min-height: 100vh; }
+
+  .topbar { background: var(--azul-oscuro); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 12px rgba(0,0,0,.2); }
+  .topbar .brand { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fff; }
+  .topbar .brand span { color: var(--amarillo); }
+  .topbar .version { font-size: .72rem; color: rgba(255,255,255,.45); }
+
+  .wrapper { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 56px); }
+
+  /* ── Panel izquierdo ── */
+  .panel-form { background: #fff; border-right: 1px solid var(--gris-borde); padding: 22px 20px; overflow-y: auto; }
+  .panel-form h2 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: .95rem; color: var(--azul-oscuro); margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid var(--amarillo); }
+
+  .upload-zone { border: 2px dashed var(--gris-borde); border-radius: 10px; padding: 22px 14px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; margin-bottom: 18px; }
+  .upload-zone:hover { border-color: var(--azul); background: #eef3fb; }
+  .upload-zone .icon { font-size: 2rem; margin-bottom: 6px; }
+  .upload-zone p { font-size: .82rem; color: #6b7280; }
+  .upload-zone p strong { color: var(--azul); }
+  .upload-zone.loaded { border-color: #16a34a; background: #f0fdf4; cursor: default; }
+  .upload-zone.loaded p, .upload-zone.loaded p strong { color: #16a34a; }
+  #file-input { display: none; }
+
+  .info-box { background: #eef3fb; border-left: 3px solid var(--azul); border-radius: 0 6px 6px 0; padding: 10px 12px; font-size: .78rem; color: var(--azul-oscuro); margin-bottom: 16px; display: none; }
+  .info-box b { display: block; margin-bottom: 3px; font-size: .82rem; }
+
+  .form-section { margin-bottom: 14px; }
+  .form-section label { display: block; font-size: .7rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
+  .form-section input, .form-section select { width: 100%; padding: 9px 11px; border: 1.5px solid var(--gris-borde); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: .88rem; color: var(--texto); background: var(--gris-claro); transition: border-color .2s; }
+  .form-section input:focus, .form-section select:focus { outline: none; border-color: var(--azul); background: #fff; }
+  select:disabled, input:disabled { opacity: .5; }
+
+  .btn-generar { width: 100%; padding: 13px; background: var(--azul); color: #fff; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: .95rem; cursor: pointer; margin-top: 6px; transition: background .2s; }
+  .btn-generar:hover:not(:disabled) { background: var(--azul-oscuro); }
+  .btn-generar:disabled { background: #9ca3af; cursor: not-allowed; }
+
+  /* ── Panel derecho ── */
+  .panel-preview { padding: 24px 28px; display: flex; flex-direction: column; align-items: center; }
+  .preview-controls { display: flex; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 440px; }
+  .btn-print { flex: 1; padding: 11px; background: var(--rojo); color: #fff; border: none; border-radius: 7px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: .88rem; cursor: pointer; transition: background .2s; }
+  .btn-print:hover { background: #c0050f; }
+
+  /* ── Ticket ── */
+  .ticket-wrap { width: 100%; max-width: 440px; }
+  #ticket { background: #fff; border: 1.5px solid var(--gris-borde); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,61,122,.1); }
+
+  .ticket-header { background: var(--azul-oscuro); color: #fff; padding: 16px 18px 14px; }
+  .tk-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; margin-bottom: 3px; }
+  .tk-sucursal { font-size: .82rem; color: var(--amarillo); font-weight: 500; margin-bottom: 4px; }
+  .tk-meta { display: flex; justify-content: space-between; font-size: .78rem; opacity: .85; }
+  .tk-ruta { display: inline-block; background: var(--rojo); color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: .78rem; padding: 3px 12px; border-radius: 20px; margin-top: 8px; }
+
+  .ticket-body { padding-bottom: 10px; }
+  .tk-sec-header { background: var(--azul); color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: .72rem; padding: 5px 14px; letter-spacing: .5px; text-transform: uppercase; }
+  .tk-sec-header.equipo { background: var(--azul-oscuro); font-size: .68rem; }
+
+  .tk-table, .tk-eq-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
+  .tk-table thead tr { background: #eef3fb; }
+  .tk-table thead th { padding: 5px 10px; text-align: left; font-size: .63rem; font-weight: 600; color: var(--azul); text-transform: uppercase; letter-spacing: .4px; }
+  .tk-table thead th:not(:first-child) { text-align: center; width: 50px; }
+  .tk-table tbody tr, .tk-eq-table tbody tr { border-bottom: 1px solid #f0f0f0; }
+  .tk-table tbody td { padding: 4px 10px; }
+  .tk-table tbody td:not(:first-child) { text-align: center; font-weight: 600; color: var(--azul-oscuro); }
+  .tk-table tbody td:last-child { color: var(--rojo); }
+  .tk-table tbody tr:nth-child(even), .tk-eq-table tbody tr:nth-child(even) { background: #fafbfd; }
+  .tk-eq-table tbody td { padding: 4px 10px; }
+  .tk-eq-table tbody td:last-child { text-align: center; font-weight: 600; color: var(--azul-oscuro); width: 50px; }
+
+  .ticket-footer { border-top: 2px dashed var(--gris-borde); padding: 9px 14px; display: flex; justify-content: space-between; font-size: .68rem; color: #9ca3af; margin-top: 6px; }
+
+  .placeholder { padding: 50px 20px; text-align: center; color: #9ca3af; font-size: .88rem; line-height: 1.8; }
+  .placeholder .big { font-size: 2.5rem; display: block; margin-bottom: 10px; }
+
+  /* ── Print ── */
+  @media print {
+    body { background: #fff; }
+    .topbar, .panel-form, .preview-controls { display: none !important; }
+    .wrapper { display: block; }
+    .panel-preview { padding: 0; align-items: flex-start; }
+    .ticket-wrap { max-width: 100%; }
+    #ticket { border: none; border-radius: 0; box-shadow: none; }
+    .tk-table, .tk-eq-table { border: 1px solid #999; }
+    .tk-table thead th, .tk-table tbody td, .tk-eq-table tbody td { border: 1px solid #999; }
+  }
+</style>
+</head>
+<body>
+
+<div class="topbar">
+  <div class="brand">Bimbo <span>Tickets de Carga</span></div>
+  <div class="version">Carga desde archivo OLA</div>
+</div>
+
+<div class="wrapper">
+
+  <!-- ─── FORMULARIO ─── -->
+  <div class="panel-form">
+    <h2>Configurar Ticket</h2>
+
+    <div class="upload-zone" id="upload-zone" onclick="triggerUpload()">
+      <div class="icon">📂</div>
+      <p><strong>Haz clic aquí</strong> para subir el archivo</p>
+      <p style="margin-top:4px;font-size:.72rem;">OLA_vta_DDMMMAAAA.xlsx</p>
+    </div>
+    <input type="file" id="file-input" accept=".xlsx,.xls">
+
+    <div class="info-box" id="info-box">
+      <b id="info-nombre">—</b>
+      <span id="info-detalle">—</span>
+    </div>
+
+    <div class="form-section">
+      <label>Fecha</label>
+      <select id="sel-fecha" disabled>
+        <option>— carga el archivo primero —</option>
+      </select>
+    </div>
+
+    <div class="form-section">
+      <label>Rango de Rutas</label>
+      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;">
+        <select id="sel-ruta-ini" disabled>
+          <option>—</option>
+        </select>
+        <span style="font-size:.8rem;color:#9ca3af;text-align:center;">a</span>
+        <select id="sel-ruta-fin" disabled>
+          <option>—</option>
+        </select>
+      </div>
+      <div id="rutas-count" style="font-size:.72rem;color:var(--azul);margin-top:5px;display:none;">
+        — rutas seleccionadas
+      </div>
+    </div>
+
+    <div class="form-section">
+      <label>Sucursal</label>
+      <input type="text" id="f-sucursal" placeholder="Se llena automático" readonly>
+    </div>
+
+    <div class="form-section">
+      <label>Folio</label>
+      <input type="text" id="f-folio" value="F1">
+    </div>
+
+    <div class="form-section">
+      <label>Hora</label>
+      <input type="time" id="f-hora">
+    </div>
+
+    <button class="btn-generar" id="btn-gen" disabled onclick="generarTicket()">
+      ⟳ Generar Ticket
+    </button>
+  </div>
+
+  <!-- ─── VISTA PREVIA ─── -->
+  <div class="panel-preview">
+    <div class="preview-controls">
+      <button class="btn-print" onclick="window.print()">🖨 Imprimir Ticket</button>
+    </div>
+    <div class="ticket-wrap">
+      <div id="ticket">
+        <div class="placeholder">
+          <span class="big">📋</span>
+          Sube el archivo OLA Excel,<br>elige la fecha y la ruta,<br>y presiona <strong>Generar Ticket</strong>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+let allData = [];
+
+// Hora actual
+const now = new Date();
+document.getElementById('f-hora').value = now.toTimeString().slice(0,5);
+
+function triggerUpload() {
+  if (!document.getElementById('upload-zone').classList.contains('loaded')) {
+    document.getElementById('file-input').click();
+  }
+}
+
+// ── Leer archivo Excel ──
+document.getElementById('file-input').addEventListener('change', function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+
+  const reader = new FileReader();
+  reader.onload = function(ev) {
+    const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
+    const sheetName = wb.SheetNames[0];
+    const ws = wb.Sheets[sheetName];
+    const json = XLSX.utils.sheet_to_json(ws, { raw: false, dateNF: 'yyyy-mm-dd' });
+
+    allData = json;
+
+    // UI feedback
+    const zone = document.getElementById('upload-zone');
+    zone.classList.add('loaded');
+    zone.querySelector('p').innerHTML = `<strong>✔ ${file.name}</strong>`;
+    zone.querySelector('p:last-child').textContent = `${json.length} registros cargados`;
+
+    document.getElementById('info-nombre').textContent = file.name;
+    document.getElementById('info-detalle').textContent = `${json.length} filas · Hoja: ${sheetName}`;
+    document.getElementById('info-box').style.display = 'block';
+
+    // Fechas únicas
+    const fechas = [...new Set(
+      json.map(r => r['Fecha'] ? r['Fecha'].toString().slice(0,10) : '').filter(Boolean)
+    )].sort();
+
+    const sel = document.getElementById('sel-fecha');
+    sel.innerHTML = '<option value="">— selecciona fecha —</option>' +
+      fechas.map(f => `<option value="${f}">${fmtFecha(f)}</option>`).join('');
+    sel.disabled = false;
+
+    // Si solo hay una fecha, seleccionarla automáticamente
+    if (fechas.length === 1) {
+      sel.value = fechas[0];
+      sel.dispatchEvent(new Event('change'));
+    }
+  };
+  reader.readAsArrayBuffer(file);
+});
+
+// ── Cambio de fecha → llenar rutas ──
+document.getElementById('sel-fecha').addEventListener('change', function() {
+  const fecha = this.value;
+  const selIni = document.getElementById('sel-ruta-ini');
+  const selFin = document.getElementById('sel-ruta-fin');
+  document.getElementById('btn-gen').disabled = true;
+  document.getElementById('f-sucursal').value = '';
+  document.getElementById('rutas-count').style.display = 'none';
+
+  if (!fecha) {
+    selIni.innerHTML = '<option>—</option>'; selIni.disabled = true;
+    selFin.innerHTML = '<option>—</option>'; selFin.disabled = true;
+    return;
+  }
+
+  const filtrado = allData.filter(r => r['Fecha'] && r['Fecha'].toString().startsWith(fecha));
+  const rutas = [...new Set(filtrado.map(r => r['Ruta']).filter(Boolean))].sort((a,b) => a-b);
+  const opts = rutas.map(r => `<option value="${r}">${r}</option>`).join('');
+
+  selIni.innerHTML = '<option value="">— desde —</option>' + opts;
+  selFin.innerHTML = '<option value="">— hasta —</option>' + opts;
+  selIni.disabled = false;
+  selFin.disabled = false;
+
+  // Si hay rutas, preseleccionar primera y última
+  if (rutas.length > 0) {
+    selIni.value = rutas[0];
+    selFin.value = rutas[rutas.length - 1];
+    actualizarRango();
+  }
+});
+
+// ── Cambio de rango → actualizar info ──
+function actualizarRango() {
+  const fecha = document.getElementById('sel-fecha').value;
+  const ini   = parseInt(document.getElementById('sel-ruta-ini').value);
+  const fin   = parseInt(document.getElementById('sel-ruta-fin').value);
+  const count = document.getElementById('rutas-count');
+  const btn   = document.getElementById('btn-gen');
+
+  if (!ini || !fin) { btn.disabled = true; count.style.display = 'none'; return; }
+
+  // Calcular cuántas rutas hay en ese rango
+  const filtrado = allData.filter(r => r['Fecha'] && r['Fecha'].toString().startsWith(fecha));
+  const rutasEnRango = [...new Set(filtrado.map(r => r['Ruta']).filter(Boolean))]
+    .filter(r => r >= ini && r <= fin).sort((a,b) => a-b);
+
+  if (rutasEnRango.length === 0) {
+    count.textContent = '⚠ Sin rutas en ese rango';
+    count.style.color = 'var(--rojo)';
+    btn.disabled = true;
+  } else {
+    count.textContent = `✔ ${rutasEnRango.length} ruta${rutasEnRango.length>1?'s':''}: ${rutasEnRango.join(', ')}`;
+    count.style.color = 'var(--azul)';
+    btn.disabled = false;
+  }
+  count.style.display = 'block';
+
+  // Autocompletar sucursal con la primera ruta del rango
+  document.getElementById('f-sucursal').value = '';
+  if (rutasEnRango.length > 0) {
+    const row = allData.find(r =>
+      r['Ruta'] == rutasEnRango[0] &&
+      r['Fecha'] && r['Fecha'].toString().startsWith(fecha) &&
+      r['Agencia']
+    );
+    if (row) {
+      document.getElementById('f-sucursal').value = (row['Agencia'] || '').replace(/^\d+-/, '').trim();
+    }
+  }
+}
+
+document.getElementById('sel-ruta-ini').addEventListener('change', actualizarRango);
+document.getElementById('sel-ruta-fin').addEventListener('change', actualizarRango);
+
+// ── Helpers ──
+function fmtFecha(iso) {
+  if (!iso) return '';
+  const [y, m, d] = iso.split('-');
+  return `${d}/${m}/${y}`;
+}
+
+const CONT_ORDEN = [
+  'MTA - Media Tina Alta',
+  'MTB - Media Tina Baja',
+  'CU - Contenedor Unico',
+  'TIR - Tina Roja',
+  'CJM - Caja master',
+];
+const CONT_LABEL = {
+  'MTA - Media Tina Alta': 'Media Tina Alta (MTA)',
+  'MTB - Media Tina Baja': 'Media Tina Baja (MTB)',
+  'CU - Contenedor Unico': 'Contenedor Único (CU)',
+  'TIR - Tina Roja':       'Tina Roja (TIR)',
+  'CJM - Caja master':     'Caja Master (CJM)',
+};
+
+// ── Generar ticket ──
+function generarTicket() {
+  const fecha    = document.getElementById('sel-fecha').value;
+  const ini      = parseInt(document.getElementById('sel-ruta-ini').value);
+  const fin      = parseInt(document.getElementById('sel-ruta-fin').value);
+  const sucursal = document.getElementById('f-sucursal').value;
+  const folio    = document.getElementById('f-folio').value;
+  const hora     = document.getElementById('f-hora').value;
+
+  if (!fecha || !ini || !fin) return;
+
+  // Rutas en el rango seleccionado
+  const todasRutas = [...new Set(allData.map(r => r['Ruta']).filter(Boolean))].sort((a,b)=>a-b);
+  const rutasRango = todasRutas.filter(r => r >= ini && r <= fin);
+
+  // Etiqueta del rango
+  const rutaLabel = ini === fin ? `Ruta ${ini}` : `Rutas ${ini} – ${fin}`;
+
+  // Productos de todas las rutas en el rango
+  const prods = allData.filter(r =>
+    rutasRango.includes(r['Ruta']) &&
+    r['Fecha'] && r['Fecha'].toString().startsWith(fecha) &&
+    r['Contenedor']
+  );
+
+  // Equipo
+  const equipo = allData.filter(r =>
+    rutasRango.includes(r['Ruta']) &&
+    r['Fecha'] && r['Fecha'].toString().startsWith(fecha) &&
+    !r['Contenedor'] && r['Producto']
+  );
+
+  // Agrupar por contenedor y SUMAR cantidades del mismo producto
+  const grupos = {};
+  prods.forEach(r => {
+    const c = r['Contenedor'];
+    if (!grupos[c]) grupos[c] = {};
+    const key = r['Producto'] || '';
+    if (!grupos[c][key]) grupos[c][key] = { tinas: 0, pzas: 0 };
+    grupos[c][key].tinas += parseFloat(r['Tinas']) || 0;
+    grupos[c][key].pzas  += parseFloat(r['Piezas']) || 0;
+  });
+
+  // Sumar equipo
+  const equipoSum = {};
+  equipo.forEach(r => {
+    const key = r['Producto'] || '';
+    if (!equipoSum[key]) equipoSum[key] = 0;
+    equipoSum[key] += parseFloat(r['Piezas']) || 0;
+  });
+
+  let bodyHTML = '';
+
+  CONT_ORDEN.forEach(cont => {
+    if (!grupos[cont] || Object.keys(grupos[cont]).length === 0) return;
+    const label = CONT_LABEL[cont] || cont;
+    const rows = Object.entries(grupos[cont]).map(([prod, val]) => `
+      <tr>
+        <td>${prod}</td>
+        <td>${val.tinas}</td>
+        <td>${val.pzas}</td>
+      </tr>`).join('');
+
+    bodyHTML += `
+      <div>
+        <div class="tk-sec-header">${label}</div>
+        <table class="tk-table">
+          <thead><tr><th>Producto</th><th>Tinas</th><th>Pzas</th></tr></thead>
+          <tbody>${rows}</tbody>
+        </table>
+      </div>`;
+  });
+
+  // Equipo sumado
+  const eqEntries = Object.entries(equipoSum);
+  if (eqEntries.length > 0) {
+    const eqRows = eqEntries.map(([prod, pzas]) => `
+      <tr><td>${prod}</td><td>${pzas}</td></tr>`).join('');
+    bodyHTML += `
+      <div>
+        <div class="tk-sec-header equipo">Equipo / Contenedores del Camión</div>
+        <table class="tk-eq-table"><tbody>${eqRows}</tbody></table>
+      </div>`;
+  }
+
+  const totalTinas = prods.reduce((s,r) => s + (parseFloat(r['Tinas'])||0), 0);
+  const totalPzas  = prods.reduce((s,r) => s + (parseFloat(r['Piezas'])||0), 0);
+
+  document.getElementById('ticket').innerHTML = `
+    <div class="ticket-header">
+      <div class="tk-title">🗒 Ticket de Carga</div>
+      <div class="tk-sucursal">${sucursal}</div>
+      <div class="tk-meta"><span>${fmtFecha(fecha)}</span><span>${hora}</span></div>
+      <span class="tk-ruta">${rutaLabel} &nbsp; ${folio}</span>
+    </div>
+    <div class="ticket-body">${bodyHTML}</div>
+    <div class="ticket-footer">
+      <span>${rutasRango.length} ruta${rutasRango.length>1?'s':''} · ${prods.length} productos · ${totalTinas} tinas · ${totalPzas} pzas</span>
+      <span>${new Date().toLocaleString('es-MX')}</span>
+    </div>`;
+}
+
+// ── Drag & Drop ──
+const zone = document.getElementById('upload-zone');
+zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor='var(--azul)'; });
+zone.addEventListener('dragleave', () => { zone.style.borderColor=''; });
+zone.addEventListener('drop', e => {
+  e.preventDefault();
+  zone.style.borderColor='';
+  const file = e.dataTransfer.files[0];
+  if (!file) return;
+  const dt = new DataTransfer();
+  dt.items.add(file);
+  document.getElementById('file-input').files = dt.files;
+  document.getElementById('file-input').dispatchEvent(new Event('change'));
+});
+</script>
+</body>
+</html>
