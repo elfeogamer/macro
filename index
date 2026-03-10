@@ -3,118 +3,171 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Ticket de Carga — Bimbo</title>
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<title>Tickets de Carga — Bimbo</title>
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@700;800&family=DM+Sans:wght@400;500&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
 <style>
-  :root {
-    --azul: #0055A4; --azul-oscuro: #003D7A;
-    --rojo: #E30613; --amarillo: #FFD500;
-    --gris-claro: #f4f6fa; --gris-borde: #d0d7e3; --texto: #1a1f2e;
+/* ══════════════════════════════════════════
+   PANTALLA
+══════════════════════════════════════════ */
+:root {
+  --azul:#0055A4; --azul-oscuro:#003D7A;
+  --rojo:#E30613; --amarillo:#FFD500;
+  --gris-claro:#f4f6fa; --gris-borde:#d0d7e3; --texto:#1a1f2e;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{font-family:'DM Sans',sans-serif;background:var(--gris-claro);color:var(--texto);min-height:100vh;}
+
+.topbar{background:var(--azul-oscuro);padding:13px 24px;display:flex;align-items:center;justify-content:space-between;box-shadow:0 2px 10px rgba(0,0,0,.2);}
+.topbar .brand{font-family:'Syne',sans-serif;font-weight:800;font-size:1.15rem;color:#fff;}
+.topbar .brand span{color:var(--amarillo);}
+.topbar .version{font-size:.7rem;color:rgba(255,255,255,.4);}
+
+.layout{display:grid;grid-template-columns:300px 1fr;min-height:calc(100vh - 50px);}
+
+/* ── Sidebar ── */
+.sidebar{background:#fff;border-right:1px solid var(--gris-borde);padding:20px 16px;overflow-y:auto;display:flex;flex-direction:column;gap:14px;}
+.sidebar h2{font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;color:var(--azul-oscuro);padding-bottom:10px;border-bottom:2px solid var(--amarillo);}
+
+.upload-zone{border:2px dashed var(--gris-borde);border-radius:9px;padding:18px 12px;text-align:center;cursor:pointer;transition:.2s;}
+.upload-zone:hover{border-color:var(--azul);background:#eef3fb;}
+.upload-zone .icon{font-size:1.8rem;margin-bottom:5px;}
+.upload-zone p{font-size:.78rem;color:#6b7280;}
+.upload-zone p strong{color:var(--azul);}
+.upload-zone.loaded{border-color:#16a34a;background:#f0fdf4;cursor:default;}
+.upload-zone.loaded p,.upload-zone.loaded p strong{color:#16a34a;}
+#file-input{display:none;}
+
+.field label{display:block;font-size:.67rem;font-weight:600;color:#6b7280;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.field select,.field input{width:100%;padding:8px 10px;border:1.5px solid var(--gris-borde);border-radius:6px;font-family:'DM Sans',sans-serif;font-size:.85rem;color:var(--texto);background:var(--gris-claro);transition:.2s;}
+.field select:focus,.field input:focus{outline:none;border-color:var(--azul);background:#fff;}
+select:disabled{opacity:.45;}
+
+.rango-grid{display:grid;grid-template-columns:1fr 18px 1fr;gap:5px;align-items:center;}
+.rango-grid span{text-align:center;font-size:.75rem;color:#9ca3af;}
+
+.rutas-badge{font-size:.7rem;margin-top:5px;display:none;padding:4px 8px;border-radius:4px;background:#eef3fb;color:var(--azul);}
+.rutas-badge.warn{background:#fff1f1;color:var(--rojo);}
+
+.info-box{background:#eef3fb;border-left:3px solid var(--azul);border-radius:0 5px 5px 0;padding:8px 10px;font-size:.75rem;color:var(--azul-oscuro);display:none;}
+.info-box b{display:block;margin-bottom:2px;font-size:.78rem;}
+
+.btn-gen{width:100%;padding:12px;background:var(--azul);color:#fff;border:none;border-radius:7px;font-family:'Syne',sans-serif;font-weight:700;font-size:.9rem;cursor:pointer;transition:.2s;}
+.btn-gen:hover:not(:disabled){background:var(--azul-oscuro);}
+.btn-gen:disabled{background:#9ca3af;cursor:not-allowed;}
+
+.btn-print-all{width:100%;padding:11px;background:var(--rojo);color:#fff;border:none;border-radius:7px;font-family:'Syne',sans-serif;font-weight:700;font-size:.88rem;cursor:pointer;transition:.2s;display:none;}
+.btn-print-all:hover{background:#c0050f;}
+
+/* ── Area de preview ── */
+.preview-area{padding:24px;overflow-y:auto;}
+.preview-title{font-family:'Syne',sans-serif;font-weight:700;font-size:.85rem;color:#6b7280;margin-bottom:16px;display:none;}
+
+.tickets-grid{display:flex;flex-wrap:wrap;gap:20px;justify-content:flex-start;}
+
+/* ── Tarjeta de ticket (pantalla) ── */
+.ticket-card{background:#fff;border:1.5px solid var(--gris-borde);border-radius:8px;overflow:hidden;box-shadow:0 3px 16px rgba(0,61,122,.08);width:300px;flex-shrink:0;}
+.ticket-card .card-controls{background:#f8f9fb;border-top:1px solid var(--gris-borde);padding:8px 12px;display:flex;gap:8px;}
+.card-controls .btn-one{flex:1;padding:6px;background:var(--azul);color:#fff;border:none;border-radius:5px;font-size:.75rem;font-weight:600;cursor:pointer;font-family:'Syne',sans-serif;}
+.card-controls .btn-one:hover{background:var(--azul-oscuro);}
+
+.placeholder-big{padding:60px 20px;text-align:center;color:#9ca3af;font-size:.85rem;line-height:2;}
+.placeholder-big span{font-size:2.5rem;display:block;margin-bottom:10px;}
+
+/* ══════════════════════════════════════════
+   TICKET TÉRMICO 80mm
+   Aplica dentro .thermal-ticket (pantalla y print)
+══════════════════════════════════════════ */
+.thermal-ticket{
+  font-family:'Courier New',Courier,monospace;
+  font-size:11px;
+  color:#000;
+  background:#fff;
+  width:100%;
+  padding:8px 6px;
+}
+
+.th-header{text-align:center;border-bottom:1px dashed #000;padding-bottom:6px;margin-bottom:6px;}
+.th-title{font-size:13px;font-weight:bold;letter-spacing:.5px;}
+.th-sucursal{font-size:10px;margin-top:1px;}
+.th-meta{font-size:9px;margin-top:3px;display:flex;justify-content:space-between;}
+.th-ruta{font-size:12px;font-weight:bold;margin-top:4px;}
+
+.th-section{margin-bottom:4px;}
+.th-sec-title{
+  font-weight:bold;
+  font-size:10px;
+  text-transform:uppercase;
+  letter-spacing:.5px;
+  border-top:1px solid #000;
+  border-bottom:1px solid #000;
+  padding:2px 0;
+  margin:4px 0 2px;
+}
+
+.th-table{width:100%;border-collapse:collapse;font-size:10px;}
+.th-table td{padding:1px 2px;vertical-align:top;}
+.th-table td:nth-child(2),.th-table td:nth-child(3){text-align:right;white-space:nowrap;width:28px;}
+.th-table tr:nth-child(even) td{background:#f5f5f5;}
+
+.th-col-headers{display:flex;justify-content:space-between;font-size:9px;font-weight:bold;border-bottom:1px solid #ccc;padding-bottom:1px;margin-bottom:1px;}
+.th-col-headers .ch-prod{flex:1;}
+.th-col-headers .ch-t,.th-col-headers .ch-p{width:28px;text-align:right;}
+
+.th-equipo{margin-top:4px;border-top:1px dashed #000;padding-top:4px;}
+.th-equipo-title{font-size:9px;font-weight:bold;text-transform:uppercase;margin-bottom:2px;}
+.th-eq-row{display:flex;justify-content:space-between;font-size:10px;padding:1px 0;}
+
+.th-footer{border-top:1px dashed #000;margin-top:6px;padding-top:4px;font-size:9px;text-align:center;color:#555;}
+
+/* ══════════════════════════════════════════
+   IMPRESIÓN
+══════════════════════════════════════════ */
+@media print {
+  body{background:#fff;}
+  .topbar,.sidebar,.preview-title{display:none!important;}
+  .layout{display:block;}
+  .preview-area{padding:0;}
+  .tickets-grid{display:block;}
+
+  .ticket-card{
+    width:80mm;
+    border:none;
+    border-radius:0;
+    box-shadow:none;
+    page-break-after:always;
+    break-after:page;
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body { font-family: 'DM Sans', sans-serif; background: var(--gris-claro); color: var(--texto); min-height: 100vh; }
+  .ticket-card:last-child{page-break-after:avoid;break-after:avoid;}
+  .card-controls{display:none!important;}
 
-  .topbar { background: var(--azul-oscuro); padding: 14px 28px; display: flex; align-items: center; justify-content: space-between; box-shadow: 0 2px 12px rgba(0,0,0,.2); }
-  .topbar .brand { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.2rem; color: #fff; }
-  .topbar .brand span { color: var(--amarillo); }
-  .topbar .version { font-size: .72rem; color: rgba(255,255,255,.45); }
-
-  .wrapper { display: grid; grid-template-columns: 320px 1fr; min-height: calc(100vh - 56px); }
-
-  /* ── Panel izquierdo ── */
-  .panel-form { background: #fff; border-right: 1px solid var(--gris-borde); padding: 22px 20px; overflow-y: auto; }
-  .panel-form h2 { font-family: 'Syne', sans-serif; font-weight: 700; font-size: .95rem; color: var(--azul-oscuro); margin-bottom: 18px; padding-bottom: 10px; border-bottom: 2px solid var(--amarillo); }
-
-  .upload-zone { border: 2px dashed var(--gris-borde); border-radius: 10px; padding: 22px 14px; text-align: center; cursor: pointer; transition: border-color .2s, background .2s; margin-bottom: 18px; }
-  .upload-zone:hover { border-color: var(--azul); background: #eef3fb; }
-  .upload-zone .icon { font-size: 2rem; margin-bottom: 6px; }
-  .upload-zone p { font-size: .82rem; color: #6b7280; }
-  .upload-zone p strong { color: var(--azul); }
-  .upload-zone.loaded { border-color: #16a34a; background: #f0fdf4; cursor: default; }
-  .upload-zone.loaded p, .upload-zone.loaded p strong { color: #16a34a; }
-  #file-input { display: none; }
-
-  .info-box { background: #eef3fb; border-left: 3px solid var(--azul); border-radius: 0 6px 6px 0; padding: 10px 12px; font-size: .78rem; color: var(--azul-oscuro); margin-bottom: 16px; display: none; }
-  .info-box b { display: block; margin-bottom: 3px; font-size: .82rem; }
-
-  .form-section { margin-bottom: 14px; }
-  .form-section label { display: block; font-size: .7rem; font-weight: 600; color: #6b7280; text-transform: uppercase; letter-spacing: .5px; margin-bottom: 5px; }
-  .form-section input, .form-section select { width: 100%; padding: 9px 11px; border: 1.5px solid var(--gris-borde); border-radius: 6px; font-family: 'DM Sans', sans-serif; font-size: .88rem; color: var(--texto); background: var(--gris-claro); transition: border-color .2s; }
-  .form-section input:focus, .form-section select:focus { outline: none; border-color: var(--azul); background: #fff; }
-  select:disabled, input:disabled { opacity: .5; }
-
-  .btn-generar { width: 100%; padding: 13px; background: var(--azul); color: #fff; border: none; border-radius: 8px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: .95rem; cursor: pointer; margin-top: 6px; transition: background .2s; }
-  .btn-generar:hover:not(:disabled) { background: var(--azul-oscuro); }
-  .btn-generar:disabled { background: #9ca3af; cursor: not-allowed; }
-
-  /* ── Panel derecho ── */
-  .panel-preview { padding: 24px 28px; display: flex; flex-direction: column; align-items: center; }
-  .preview-controls { display: flex; gap: 10px; margin-bottom: 20px; width: 100%; max-width: 440px; }
-  .btn-print { flex: 1; padding: 11px; background: var(--rojo); color: #fff; border: none; border-radius: 7px; font-family: 'Syne', sans-serif; font-weight: 700; font-size: .88rem; cursor: pointer; transition: background .2s; }
-  .btn-print:hover { background: #c0050f; }
-
-  /* ── Ticket ── */
-  .ticket-wrap { width: 100%; max-width: 440px; }
-  #ticket { background: #fff; border: 1.5px solid var(--gris-borde); border-radius: 10px; overflow: hidden; box-shadow: 0 4px 24px rgba(0,61,122,.1); }
-
-  .ticket-header { background: var(--azul-oscuro); color: #fff; padding: 16px 18px 14px; }
-  .tk-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.1rem; margin-bottom: 3px; }
-  .tk-sucursal { font-size: .82rem; color: var(--amarillo); font-weight: 500; margin-bottom: 4px; }
-  .tk-meta { display: flex; justify-content: space-between; font-size: .78rem; opacity: .85; }
-  .tk-ruta { display: inline-block; background: var(--rojo); color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: .78rem; padding: 3px 12px; border-radius: 20px; margin-top: 8px; }
-
-  .ticket-body { padding-bottom: 10px; }
-  .tk-sec-header { background: var(--azul); color: #fff; font-family: 'Syne', sans-serif; font-weight: 700; font-size: .72rem; padding: 5px 14px; letter-spacing: .5px; text-transform: uppercase; }
-  .tk-sec-header.equipo { background: var(--azul-oscuro); font-size: .68rem; }
-
-  .tk-table, .tk-eq-table { width: 100%; border-collapse: collapse; font-size: .78rem; }
-  .tk-table thead tr { background: #eef3fb; }
-  .tk-table thead th { padding: 5px 10px; text-align: left; font-size: .63rem; font-weight: 600; color: var(--azul); text-transform: uppercase; letter-spacing: .4px; }
-  .tk-table thead th:not(:first-child) { text-align: center; width: 50px; }
-  .tk-table tbody tr, .tk-eq-table tbody tr { border-bottom: 1px solid #f0f0f0; }
-  .tk-table tbody td { padding: 4px 10px; }
-  .tk-table tbody td:not(:first-child) { text-align: center; font-weight: 600; color: var(--azul-oscuro); }
-  .tk-table tbody td:last-child { color: var(--rojo); }
-  .tk-table tbody tr:nth-child(even), .tk-eq-table tbody tr:nth-child(even) { background: #fafbfd; }
-  .tk-eq-table tbody td { padding: 4px 10px; }
-  .tk-eq-table tbody td:last-child { text-align: center; font-weight: 600; color: var(--azul-oscuro); width: 50px; }
-
-  .ticket-footer { border-top: 2px dashed var(--gris-borde); padding: 9px 14px; display: flex; justify-content: space-between; font-size: .68rem; color: #9ca3af; margin-top: 6px; }
-
-  .placeholder { padding: 50px 20px; text-align: center; color: #9ca3af; font-size: .88rem; line-height: 1.8; }
-  .placeholder .big { font-size: 2.5rem; display: block; margin-bottom: 10px; }
-
-  /* ── Print ── */
-  @media print {
-    body { background: #fff; }
-    .topbar, .panel-form, .preview-controls { display: none !important; }
-    .wrapper { display: block; }
-    .panel-preview { padding: 0; align-items: flex-start; }
-    .ticket-wrap { max-width: 100%; }
-    #ticket { border: none; border-radius: 0; box-shadow: none; }
-    .tk-table, .tk-eq-table { border: 1px solid #999; }
-    .tk-table thead th, .tk-table tbody td, .tk-eq-table tbody td { border: 1px solid #999; }
+  .thermal-ticket{
+    font-size:10px;
+    padding:4px 2px;
   }
+  .th-title{font-size:12px;}
+  .th-table{font-size:9px;}
+  .th-table tr:nth-child(even) td{background:none;}
+}
 </style>
 </head>
 <body>
 
 <div class="topbar">
   <div class="brand">Bimbo <span>Tickets de Carga</span></div>
-  <div class="version">Carga desde archivo OLA</div>
+  <div class="version">Térmico 80mm · Un ticket por ruta</div>
 </div>
 
-<div class="wrapper">
+<div class="layout">
 
-  <!-- ─── FORMULARIO ─── -->
-  <div class="panel-form">
-    <h2>Configurar Ticket</h2>
+  <!-- ── Sidebar ── -->
+  <div class="sidebar">
+    <h2>Configurar</h2>
 
     <div class="upload-zone" id="upload-zone" onclick="triggerUpload()">
       <div class="icon">📂</div>
       <p><strong>Haz clic aquí</strong> para subir el archivo</p>
-      <p style="margin-top:4px;font-size:.72rem;">OLA_vta_DDMMMAAAA.xlsx</p>
+      <p style="margin-top:3px;font-size:.7rem;">OLA_vta_DDMMMAAAA.xlsx</p>
     </div>
     <input type="file" id="file-input" accept=".xlsx,.xls">
 
@@ -123,60 +176,42 @@
       <span id="info-detalle">—</span>
     </div>
 
-    <div class="form-section">
+    <div class="field">
       <label>Fecha</label>
-      <select id="sel-fecha" disabled>
-        <option>— carga el archivo primero —</option>
-      </select>
+      <select id="sel-fecha" disabled><option>— carga el archivo —</option></select>
     </div>
 
-    <div class="form-section">
-      <label>Rango de Rutas</label>
-      <div style="display:grid;grid-template-columns:1fr auto 1fr;gap:6px;align-items:center;">
-        <select id="sel-ruta-ini" disabled>
-          <option>—</option>
-        </select>
-        <span style="font-size:.8rem;color:#9ca3af;text-align:center;">a</span>
-        <select id="sel-ruta-fin" disabled>
-          <option>—</option>
-        </select>
+    <div class="field">
+      <label>Rango de rutas</label>
+      <div class="rango-grid">
+        <select id="sel-ini" disabled><option>—</option></select>
+        <span>a</span>
+        <select id="sel-fin" disabled><option>—</option></select>
       </div>
-      <div id="rutas-count" style="font-size:.72rem;color:var(--azul);margin-top:5px;display:none;">
-        — rutas seleccionadas
-      </div>
+      <div class="rutas-badge" id="rutas-badge">—</div>
     </div>
 
-    <div class="form-section">
-      <label>Sucursal</label>
-      <input type="text" id="f-sucursal" placeholder="Se llena automático" readonly>
-    </div>
-
-    <div class="form-section">
+    <div class="field">
       <label>Folio</label>
       <input type="text" id="f-folio" value="F1">
     </div>
 
-    <div class="form-section">
+    <div class="field">
       <label>Hora</label>
       <input type="time" id="f-hora">
     </div>
 
-    <button class="btn-generar" id="btn-gen" disabled onclick="generarTicket()">
-      ⟳ Generar Ticket
-    </button>
+    <button class="btn-gen" id="btn-gen" disabled onclick="generarTodos()">⟳ Generar Tickets</button>
+    <button class="btn-print-all" id="btn-print" onclick="window.print()">🖨 Imprimir Todos</button>
   </div>
 
-  <!-- ─── VISTA PREVIA ─── -->
-  <div class="panel-preview">
-    <div class="preview-controls">
-      <button class="btn-print" onclick="window.print()">🖨 Imprimir Ticket</button>
-    </div>
-    <div class="ticket-wrap">
-      <div id="ticket">
-        <div class="placeholder">
-          <span class="big">📋</span>
-          Sube el archivo OLA Excel,<br>elige la fecha y la ruta,<br>y presiona <strong>Generar Ticket</strong>
-        </div>
+  <!-- ── Vista previa ── -->
+  <div class="preview-area">
+    <div class="preview-title" id="preview-title">Vista previa — tickets generados</div>
+    <div class="tickets-grid" id="tickets-grid">
+      <div class="placeholder-big">
+        <span>🗒</span>
+        Sube el archivo OLA,<br>elige el rango de rutas<br>y presiona <strong>Generar Tickets</strong>
       </div>
     </div>
   </div>
@@ -184,272 +219,252 @@
 </div>
 
 <script>
+/* ══ DATOS ══ */
 let allData = [];
 
-// Hora actual
 const now = new Date();
 document.getElementById('f-hora').value = now.toTimeString().slice(0,5);
 
-function triggerUpload() {
-  if (!document.getElementById('upload-zone').classList.contains('loaded')) {
-    document.getElementById('file-input').click();
+/* ══ CATEGORÍAS por nombre de producto ══
+   Reglas simples basadas en los sufijos/palabras clave del archivo real */
+const CATEGORIAS = [
+  { label: 'BOLLERÍA',    test: p => /Bimbol|SuperBoll|SupeBol|MediaNoch|MediNoc|BolBrioch|BolSupAjo|BollCarl|BimParr|HotDog|SupHDog|BimbBrio|BolSup|Bollos|BimLunch/i.test(p) },
+  { label: 'SALADOS',     test: p => /PBlanc|PBla|PanInt|PnArte|PanCer|MulCer|PanLin|PNatur|PanMultig|Pan12Gran|WonAjon|PMolid|Molido|Pan100pct|PInteg|PBlanco|Pan12|Tort|Tost|Reban|PanRel|HotDog|SupHDog|Bimbol.*Parr|BimbParr|BimParr|MediNoc|MediaNoch|SuperBol|SupeBol/i.test(p) && !/Dulce|Gans|Pingu|Choc|Roles|Cros|Bimbun|Dona|Concha|Panque|DuoNit|Nito|Spon|Trik|Subm|Mobi|Dalm|Bomb|Barrit|Caneli|Powder|Polvo|Favor|Mada|Man[Vu]|Colch|BraFrut|BranFrut|BFrGrn|MiPan|GalletaAve|Muffv|MiPol|Tar|Pas[tC]|Ping|ChocRole|RolloF|DuoPy|MaxC|MaxP|MaxTr|Maxit|MinBar|MiniBar|MinPing|MinGansi|MinChRol|2PackGans|Anim|LBSo|LBi|LechG|LecheN|TriGans|TuboGans|FrutSpo|MiGansi|MiPingu|GalletPing|Cors|CanapMTA|Caña/i.test(p) },
+  { label: 'TÍA ROSA',    test: p => /Concha|Bigot|Bigo[Ct]|SemtPil|Cuern|MantVaini|MantNue|TiritDor|PasCua|MantNja|MantecBico|MantecaVai|MantecaNue|MadCuadr|TiraDor|Doradit|GalletaAve|Muffv|MiPol|TarPin|TarZar|TarFre|MantV.*SP|Empa[Nc]|EmpanCaj|FavNuez|FavVain|FavorVain|MagnasCPT|ManHer|ManVa|RockTir|RolesC|RolGlas|DecaRosq|Polvo.*Pane|Cors|Caña|Maria|DelicBetun|DelicBomb|DelicVain|DelicChoc|DonEsp|Donad|Donas|Doners/i.test(p) },
+  { label: 'MARINELA',    test: p => /Gans[oi]|Gans50|Pingu|ChocRole|RolloFres|DuoNapol|DuoNitoSP|DuoPyP|DuoPyN|Dalmat|Bomb.*55|ChocotFre|Mobi|PastH|PastC|PastBoca|PastiOri|PayF|PingH|ChRolCe|MinGansi|MinChRol|MinPing|TriGans|TuboGans|MiGansi|MiPingu|GalletPing|2PackGans|LechGans|LecheNito|FrutSpo|Nito[1M]|SubChoSP|SubFsa|SubVai|SubmFsa|SubmVai|SubmCho/i.test(p) },
+  { label: 'BIMBO DULCE', test: p => /Bimbunue|Cros[MH]|CrossCho|Panque|DuoNito|Spon[ch]|Trik|Dona[rs]|ConchVain|ConchaVai|BraFrut|BranFrut|BFrGrn|MiPanN|Mada|ManV[a6]|ManHer|Colch|MChisp|LBSo|LBi|Canelita|CaneBit|TrikBit|Lors|Reban|DelChoch|Barrit|BarFre|BarPin|BesoN|PnqctoChoco|MiBarrFre|MinBarF|MinBarP|MiniBar|PromBarr|PromPing|PromRoll|MaxC|MaxP|MaxTr|Maxit|Anim|Cors|Caña/i.test(p) },
+  { label: 'GALLETAS',    test: p => /Canap|Crem.*LAR|Galeta|Gallet|Salada|Salmas|FPSalmas|STostN|Lors|Maria|Decad|MaxC|MaxP|MaxTr|Maxit|Tosta|TostClas|GallMolid|Snack/i.test(p) },
+];
+
+function categorizar(producto) {
+  for (const c of CATEGORIAS) {
+    if (c.test(producto)) return c.label;
   }
+  return 'OTROS';
 }
 
-// ── Leer archivo Excel ──
+/* ══ UPLOAD ══ */
+function triggerUpload() {
+  if (!document.getElementById('upload-zone').classList.contains('loaded'))
+    document.getElementById('file-input').click();
+}
+
 document.getElementById('file-input').addEventListener('change', function(e) {
   const file = e.target.files[0];
   if (!file) return;
-
   const reader = new FileReader();
-  reader.onload = function(ev) {
-    const wb = XLSX.read(ev.target.result, { type: 'array', cellDates: true });
-    const sheetName = wb.SheetNames[0];
-    const ws = wb.Sheets[sheetName];
-    const json = XLSX.utils.sheet_to_json(ws, { raw: false, dateNF: 'yyyy-mm-dd' });
+  reader.onload = ev => {
+    const wb = XLSX.read(ev.target.result, { type:'array', cellDates:true });
+    const ws = wb.Sheets[wb.SheetNames[0]];
+    allData = XLSX.utils.sheet_to_json(ws, { raw:false, dateNF:'yyyy-mm-dd' });
 
-    allData = json;
-
-    // UI feedback
     const zone = document.getElementById('upload-zone');
     zone.classList.add('loaded');
     zone.querySelector('p').innerHTML = `<strong>✔ ${file.name}</strong>`;
-    zone.querySelector('p:last-child').textContent = `${json.length} registros cargados`;
+    zone.querySelector('p:last-child').textContent = `${allData.length} registros`;
 
     document.getElementById('info-nombre').textContent = file.name;
-    document.getElementById('info-detalle').textContent = `${json.length} filas · Hoja: ${sheetName}`;
+    document.getElementById('info-detalle').textContent = `${allData.length} filas · ${wb.SheetNames[0]}`;
     document.getElementById('info-box').style.display = 'block';
 
-    // Fechas únicas
-    const fechas = [...new Set(
-      json.map(r => r['Fecha'] ? r['Fecha'].toString().slice(0,10) : '').filter(Boolean)
-    )].sort();
-
-    const sel = document.getElementById('sel-fecha');
-    sel.innerHTML = '<option value="">— selecciona fecha —</option>' +
-      fechas.map(f => `<option value="${f}">${fmtFecha(f)}</option>`).join('');
-    sel.disabled = false;
-
-    // Si solo hay una fecha, seleccionarla automáticamente
-    if (fechas.length === 1) {
-      sel.value = fechas[0];
-      sel.dispatchEvent(new Event('change'));
-    }
+    const fechas = [...new Set(allData.map(r => (r['Fecha']||'').toString().slice(0,10)).filter(Boolean))].sort();
+    const sf = document.getElementById('sel-fecha');
+    sf.innerHTML = '<option value="">— fecha —</option>' + fechas.map(f=>`<option value="${f}">${fmtF(f)}</option>`).join('');
+    sf.disabled = false;
+    if (fechas.length === 1) { sf.value = fechas[0]; sf.dispatchEvent(new Event('change')); }
   };
   reader.readAsArrayBuffer(file);
 });
 
-// ── Cambio de fecha → llenar rutas ──
+/* ══ FECHA → RUTAS ══ */
 document.getElementById('sel-fecha').addEventListener('change', function() {
   const fecha = this.value;
-  const selIni = document.getElementById('sel-ruta-ini');
-  const selFin = document.getElementById('sel-ruta-fin');
+  const si = document.getElementById('sel-ini');
+  const sf2 = document.getElementById('sel-fin');
   document.getElementById('btn-gen').disabled = true;
-  document.getElementById('f-sucursal').value = '';
-  document.getElementById('rutas-count').style.display = 'none';
+  document.getElementById('rutas-badge').style.display = 'none';
+  if (!fecha) { si.innerHTML='<option>—</option>'; si.disabled=true; sf2.innerHTML='<option>—</option>'; sf2.disabled=true; return; }
 
-  if (!fecha) {
-    selIni.innerHTML = '<option>—</option>'; selIni.disabled = true;
-    selFin.innerHTML = '<option>—</option>'; selFin.disabled = true;
-    return;
-  }
-
-  const filtrado = allData.filter(r => r['Fecha'] && r['Fecha'].toString().startsWith(fecha));
-  const rutas = [...new Set(filtrado.map(r => r['Ruta']).filter(Boolean))].sort((a,b) => a-b);
-  const opts = rutas.map(r => `<option value="${r}">${r}</option>`).join('');
-
-  selIni.innerHTML = '<option value="">— desde —</option>' + opts;
-  selFin.innerHTML = '<option value="">— hasta —</option>' + opts;
-  selIni.disabled = false;
-  selFin.disabled = false;
-
-  // Si hay rutas, preseleccionar primera y última
-  if (rutas.length > 0) {
-    selIni.value = rutas[0];
-    selFin.value = rutas[rutas.length - 1];
-    actualizarRango();
-  }
+  const rutas = [...new Set(allData.filter(r=>r['Fecha']&&r['Fecha'].toString().startsWith(fecha)).map(r=>r['Ruta']).filter(Boolean))].sort((a,b)=>a-b);
+  const opts = rutas.map(r=>`<option value="${r}">${r}</option>`).join('');
+  si.innerHTML = '<option value="">— desde —</option>' + opts;
+  sf2.innerHTML = '<option value="">— hasta —</option>' + opts;
+  si.disabled = false; sf2.disabled = false;
+  if (rutas.length) { si.value = rutas[0]; sf2.value = rutas[rutas.length-1]; actualizarBadge(); }
 });
 
-// ── Cambio de rango → actualizar info ──
-function actualizarRango() {
+document.getElementById('sel-ini').addEventListener('change', actualizarBadge);
+document.getElementById('sel-fin').addEventListener('change', actualizarBadge);
+
+function actualizarBadge() {
   const fecha = document.getElementById('sel-fecha').value;
-  const ini   = parseInt(document.getElementById('sel-ruta-ini').value);
-  const fin   = parseInt(document.getElementById('sel-ruta-fin').value);
-  const count = document.getElementById('rutas-count');
-  const btn   = document.getElementById('btn-gen');
-
-  if (!ini || !fin) { btn.disabled = true; count.style.display = 'none'; return; }
-
-  // Calcular cuántas rutas hay en ese rango
-  const filtrado = allData.filter(r => r['Fecha'] && r['Fecha'].toString().startsWith(fecha));
-  const rutasEnRango = [...new Set(filtrado.map(r => r['Ruta']).filter(Boolean))]
-    .filter(r => r >= ini && r <= fin).sort((a,b) => a-b);
-
-  if (rutasEnRango.length === 0) {
-    count.textContent = '⚠ Sin rutas en ese rango';
-    count.style.color = 'var(--rojo)';
-    btn.disabled = true;
-  } else {
-    count.textContent = `✔ ${rutasEnRango.length} ruta${rutasEnRango.length>1?'s':''}: ${rutasEnRango.join(', ')}`;
-    count.style.color = 'var(--azul)';
-    btn.disabled = false;
-  }
-  count.style.display = 'block';
-
-  // Autocompletar sucursal con la primera ruta del rango
-  document.getElementById('f-sucursal').value = '';
-  if (rutasEnRango.length > 0) {
-    const row = allData.find(r =>
-      r['Ruta'] == rutasEnRango[0] &&
-      r['Fecha'] && r['Fecha'].toString().startsWith(fecha) &&
-      r['Agencia']
-    );
-    if (row) {
-      document.getElementById('f-sucursal').value = (row['Agencia'] || '').replace(/^\d+-/, '').trim();
-    }
-  }
+  const ini = parseInt(document.getElementById('sel-ini').value);
+  const fin = parseInt(document.getElementById('sel-fin').value);
+  const badge = document.getElementById('rutas-badge');
+  badge.style.display = 'block';
+  if (!ini || !fin) { badge.textContent='Selecciona rango'; badge.className='rutas-badge warn'; document.getElementById('btn-gen').disabled=true; return; }
+  const rutas = rutasEnRango(fecha, ini, fin);
+  if (!rutas.length) { badge.textContent='⚠ Sin rutas en ese rango'; badge.className='rutas-badge warn'; document.getElementById('btn-gen').disabled=true; return; }
+  badge.textContent = `✔ ${rutas.length} ruta${rutas.length>1?'s':''}: ${rutas.slice(0,8).join(', ')}${rutas.length>8?'…':''}`;
+  badge.className = 'rutas-badge';
+  document.getElementById('btn-gen').disabled = false;
 }
 
-document.getElementById('sel-ruta-ini').addEventListener('change', actualizarRango);
-document.getElementById('sel-ruta-fin').addEventListener('change', actualizarRango);
-
-// ── Helpers ──
-function fmtFecha(iso) {
-  if (!iso) return '';
-  const [y, m, d] = iso.split('-');
-  return `${d}/${m}/${y}`;
+function rutasEnRango(fecha, ini, fin) {
+  return [...new Set(allData.filter(r=>r['Fecha']&&r['Fecha'].toString().startsWith(fecha)).map(r=>r['Ruta']).filter(Boolean))]
+    .filter(r=>r>=ini&&r<=fin).sort((a,b)=>a-b);
 }
 
-const CONT_ORDEN = [
-  'MTA - Media Tina Alta',
-  'MTB - Media Tina Baja',
-  'CU - Contenedor Unico',
-  'TIR - Tina Roja',
-  'CJM - Caja master',
-];
-const CONT_LABEL = {
-  'MTA - Media Tina Alta': 'Media Tina Alta (MTA)',
-  'MTB - Media Tina Baja': 'Media Tina Baja (MTB)',
-  'CU - Contenedor Unico': 'Contenedor Único (CU)',
-  'TIR - Tina Roja':       'Tina Roja (TIR)',
-  'CJM - Caja master':     'Caja Master (CJM)',
-};
+/* ══ HELPERS ══ */
+function fmtF(iso) { if(!iso)return''; const[y,m,d]=iso.split('-'); return`${d}/${m}/${y}`; }
 
-// ── Generar ticket ──
-function generarTicket() {
-  const fecha    = document.getElementById('sel-fecha').value;
-  const ini      = parseInt(document.getElementById('sel-ruta-ini').value);
-  const fin      = parseInt(document.getElementById('sel-ruta-fin').value);
-  const sucursal = document.getElementById('f-sucursal').value;
-  const folio    = document.getElementById('f-folio').value;
-  const hora     = document.getElementById('f-hora').value;
+const CONT_ORDEN = ['MTA - Media Tina Alta','MTB - Media Tina Baja','CU - Contenedor Unico','TIR - Tina Roja','CJM - Caja master'];
+const CONT_SHORT = {'MTA - Media Tina Alta':'MTA','MTB - Media Tina Baja':'MTB','CU - Contenedor Unico':'CU','TIR - Tina Roja':'TIR','CJM - Caja master':'CJM'};
 
-  if (!fecha || !ini || !fin) return;
+/* ══ CONSTRUIR HTML DE UN TICKET TÉRMICO ══ */
+function buildThermal(ruta, fecha, sucursal, folio, hora) {
+  const prodRows = allData.filter(r=>r['Ruta']==ruta&&r['Fecha']&&r['Fecha'].toString().startsWith(fecha)&&r['Contenedor']);
+  const eqRows   = allData.filter(r=>r['Ruta']==ruta&&r['Fecha']&&r['Fecha'].toString().startsWith(fecha)&&!r['Contenedor']&&r['Producto']);
 
-  // Rutas en el rango seleccionado
-  const todasRutas = [...new Set(allData.map(r => r['Ruta']).filter(Boolean))].sort((a,b)=>a-b);
-  const rutasRango = todasRutas.filter(r => r >= ini && r <= fin);
+  if (!prodRows.length && !eqRows.length) return null;
 
-  // Etiqueta del rango
-  const rutaLabel = ini === fin ? `Ruta ${ini}` : `Rutas ${ini} – ${fin}`;
+  // Agrupar por CATEGORÍA → dentro por CONTENEDOR
+  const byCat = {};
+  prodRows.forEach(r => {
+    const cat = categorizar(r['Producto']||'');
+    const cont = r['Contenedor'];
+    if (!byCat[cat]) byCat[cat] = {};
+    if (!byCat[cat][cont]) byCat[cat][cont] = [];
+    byCat[cat][cont].push(r);
+  });
 
-  // Productos de todas las rutas en el rango
-  const prods = allData.filter(r =>
-    rutasRango.includes(r['Ruta']) &&
-    r['Fecha'] && r['Fecha'].toString().startsWith(fecha) &&
-    r['Contenedor']
-  );
+  // Orden de categorías (las que aparecen)
+  const catOrden = ['BOLLERÍA','SALADOS','TÍA ROSA','MARINELA','BIMBO DULCE','GALLETAS','OTROS'];
+
+  let body = '';
+  catOrden.forEach(cat => {
+    if (!byCat[cat]) return;
+    body += `<div class="th-sec-title">${cat}</div>`;
+    CONT_ORDEN.forEach(cont => {
+      const items = byCat[cat][cont];
+      if (!items || !items.length) return;
+      const cs = CONT_SHORT[cont] || cont;
+      body += `<div style="font-size:9px;font-weight:bold;margin:2px 0 1px;text-decoration:underline;">${cs}</div>`;
+      body += `<div class="th-col-headers"><span class="ch-prod">Producto</span><span class="ch-t">T</span><span class="ch-p">Pz</span></div>`;
+      body += `<table class="th-table">`;
+      items.forEach(r => {
+        const t  = parseFloat(r['Tinas'])||0;
+        const pz = parseFloat(r['Piezas'])||0;
+        body += `<tr><td>${r['Producto']||''}</td><td>${t}</td><td>${pz}</td></tr>`;
+      });
+      body += `</table>`;
+    });
+  });
 
   // Equipo
-  const equipo = allData.filter(r =>
-    rutasRango.includes(r['Ruta']) &&
-    r['Fecha'] && r['Fecha'].toString().startsWith(fecha) &&
-    !r['Contenedor'] && r['Producto']
-  );
-
-  // Agrupar por contenedor y SUMAR cantidades del mismo producto
-  const grupos = {};
-  prods.forEach(r => {
-    const c = r['Contenedor'];
-    if (!grupos[c]) grupos[c] = {};
-    const key = r['Producto'] || '';
-    if (!grupos[c][key]) grupos[c][key] = { tinas: 0, pzas: 0 };
-    grupos[c][key].tinas += parseFloat(r['Tinas']) || 0;
-    grupos[c][key].pzas  += parseFloat(r['Piezas']) || 0;
-  });
-
-  // Sumar equipo
-  const equipoSum = {};
-  equipo.forEach(r => {
-    const key = r['Producto'] || '';
-    if (!equipoSum[key]) equipoSum[key] = 0;
-    equipoSum[key] += parseFloat(r['Piezas']) || 0;
-  });
-
-  let bodyHTML = '';
-
-  CONT_ORDEN.forEach(cont => {
-    if (!grupos[cont] || Object.keys(grupos[cont]).length === 0) return;
-    const label = CONT_LABEL[cont] || cont;
-    const rows = Object.entries(grupos[cont]).map(([prod, val]) => `
-      <tr>
-        <td>${prod}</td>
-        <td>${val.tinas}</td>
-        <td>${val.pzas}</td>
-      </tr>`).join('');
-
-    bodyHTML += `
-      <div>
-        <div class="tk-sec-header">${label}</div>
-        <table class="tk-table">
-          <thead><tr><th>Producto</th><th>Tinas</th><th>Pzas</th></tr></thead>
-          <tbody>${rows}</tbody>
-        </table>
-      </div>`;
-  });
-
-  // Equipo sumado
-  const eqEntries = Object.entries(equipoSum);
-  if (eqEntries.length > 0) {
-    const eqRows = eqEntries.map(([prod, pzas]) => `
-      <tr><td>${prod}</td><td>${pzas}</td></tr>`).join('');
-    bodyHTML += `
-      <div>
-        <div class="tk-sec-header equipo">Equipo / Contenedores del Camión</div>
-        <table class="tk-eq-table"><tbody>${eqRows}</tbody></table>
-      </div>`;
+  if (eqRows.length) {
+    body += `<div class="th-equipo"><div class="th-equipo-title">EQUIPO</div>`;
+    eqRows.forEach(r => {
+      body += `<div class="th-eq-row"><span>${r['Producto']||''}</span><span>${parseFloat(r['Piezas'])||0}</span></div>`;
+    });
+    body += `</div>`;
   }
 
-  const totalTinas = prods.reduce((s,r) => s + (parseFloat(r['Tinas'])||0), 0);
-  const totalPzas  = prods.reduce((s,r) => s + (parseFloat(r['Piezas'])||0), 0);
+  const totalTinas = prodRows.reduce((s,r)=>s+(parseFloat(r['Tinas'])||0),0);
+  const totalPzas  = prodRows.reduce((s,r)=>s+(parseFloat(r['Piezas'])||0),0);
 
-  document.getElementById('ticket').innerHTML = `
-    <div class="ticket-header">
-      <div class="tk-title">🗒 Ticket de Carga</div>
-      <div class="tk-sucursal">${sucursal}</div>
-      <div class="tk-meta"><span>${fmtFecha(fecha)}</span><span>${hora}</span></div>
-      <span class="tk-ruta">${rutaLabel} &nbsp; ${folio}</span>
-    </div>
-    <div class="ticket-body">${bodyHTML}</div>
-    <div class="ticket-footer">
-      <span>${rutasRango.length} ruta${rutasRango.length>1?'s':''} · ${prods.length} productos · ${totalTinas} tinas · ${totalPzas} pzas</span>
-      <span>${new Date().toLocaleString('es-MX')}</span>
+  return `
+    <div class="thermal-ticket">
+      <div class="th-header">
+        <div class="th-title">TICKET DE CARGA</div>
+        <div class="th-sucursal">${sucursal}</div>
+        <div class="th-meta"><span>${fmtF(fecha)}</span><span>${hora}</span></div>
+        <div class="th-ruta">RUTA ${ruta} &nbsp; ${folio}</div>
+      </div>
+      <div class="th-body">${body}</div>
+      <div class="th-footer">${prodRows.length} productos · ${totalTinas} tinas · ${totalPzas} pzas</div>
     </div>`;
 }
 
-// ── Drag & Drop ──
+/* ══ GENERAR TODOS ══ */
+function generarTodos() {
+  const fecha = document.getElementById('sel-fecha').value;
+  const ini   = parseInt(document.getElementById('sel-ini').value);
+  const fin   = parseInt(document.getElementById('sel-fin').value);
+  const folio = document.getElementById('f-folio').value;
+  const hora  = document.getElementById('f-hora').value;
+  if (!fecha||!ini||!fin) return;
+
+  const rutas = rutasEnRango(fecha, ini, fin);
+  const grid  = document.getElementById('tickets-grid');
+  grid.innerHTML = '';
+
+  rutas.forEach(ruta => {
+    // Sucursal de esta ruta
+    const row = allData.find(r=>r['Ruta']==ruta&&r['Fecha']&&r['Fecha'].toString().startsWith(fecha)&&r['Agencia']);
+    const sucursal = row ? (row['Agencia']||'').replace(/^\d+-/,'').trim() : '';
+
+    const html = buildThermal(ruta, fecha, sucursal, folio, hora);
+    if (!html) return;
+
+    const card = document.createElement('div');
+    card.className = 'ticket-card';
+    card.innerHTML = html + `
+      <div class="card-controls">
+        <button class="btn-one" onclick="imprimirUno(this)">🖨 Imprimir esta ruta</button>
+      </div>`;
+    grid.appendChild(card);
+  });
+
+  document.getElementById('preview-title').style.display = 'block';
+  document.getElementById('btn-print').style.display = 'block';
+
+  if (!grid.children.length) {
+    grid.innerHTML = '<div class="placeholder-big"><span>⚠</span>No se encontraron productos en ese rango</div>';
+  }
+}
+
+/* ══ IMPRIMIR UNA SOLA TARJETA ══ */
+function imprimirUno(btn) {
+  const card = btn.closest('.ticket-card');
+  const thermal = card.querySelector('.thermal-ticket').outerHTML;
+  const win = window.open('','_blank','width=400,height=700');
+  win.document.write(`<!DOCTYPE html><html><head><meta charset="UTF-8">
+    <style>
+      *{box-sizing:border-box;margin:0;padding:0;}
+      body{font-family:'Courier New',monospace;font-size:10px;width:80mm;padding:4px;}
+      .thermal-ticket{width:100%;}
+      .th-header{text-align:center;border-bottom:1px dashed #000;padding-bottom:5px;margin-bottom:5px;}
+      .th-title{font-size:12px;font-weight:bold;}
+      .th-sucursal{font-size:9px;}
+      .th-meta{font-size:8px;display:flex;justify-content:space-between;margin-top:2px;}
+      .th-ruta{font-size:11px;font-weight:bold;margin-top:3px;}
+      .th-sec-title{font-weight:bold;font-size:9px;text-transform:uppercase;border-top:1px solid #000;border-bottom:1px solid #000;padding:1px 0;margin:3px 0 1px;}
+      .th-col-headers{display:flex;justify-content:space-between;font-size:8px;font-weight:bold;border-bottom:1px solid #ccc;}
+      .ch-prod{flex:1;} .ch-t,.ch-p{width:25px;text-align:right;}
+      table{width:100%;border-collapse:collapse;font-size:9px;}
+      td{padding:1px 1px;vertical-align:top;}
+      td:nth-child(2),td:nth-child(3){text-align:right;width:25px;}
+      .th-equipo{margin-top:3px;border-top:1px dashed #000;padding-top:3px;}
+      .th-equipo-title{font-size:8px;font-weight:bold;text-transform:uppercase;}
+      .th-eq-row{display:flex;justify-content:space-between;font-size:9px;}
+      .th-footer{border-top:1px dashed #000;margin-top:4px;padding-top:3px;font-size:8px;text-align:center;}
+    </style>
+  </head><body>${thermal}</body></html>`);
+  win.document.close();
+  win.focus();
+  setTimeout(()=>{ win.print(); win.close(); }, 400);
+}
+
+/* ══ DRAG & DROP ══ */
 const zone = document.getElementById('upload-zone');
-zone.addEventListener('dragover', e => { e.preventDefault(); zone.style.borderColor='var(--azul)'; });
-zone.addEventListener('dragleave', () => { zone.style.borderColor=''; });
-zone.addEventListener('drop', e => {
-  e.preventDefault();
-  zone.style.borderColor='';
-  const file = e.dataTransfer.files[0];
-  if (!file) return;
-  const dt = new DataTransfer();
-  dt.items.add(file);
-  document.getElementById('file-input').files = dt.files;
+zone.addEventListener('dragover', e=>{e.preventDefault();zone.style.borderColor='var(--azul)';});
+zone.addEventListener('dragleave', ()=>{zone.style.borderColor='';});
+zone.addEventListener('drop', e=>{
+  e.preventDefault(); zone.style.borderColor='';
+  const file=e.dataTransfer.files[0]; if(!file)return;
+  const dt=new DataTransfer(); dt.items.add(file);
+  document.getElementById('file-input').files=dt.files;
   document.getElementById('file-input').dispatchEvent(new Event('change'));
 });
 </script>
